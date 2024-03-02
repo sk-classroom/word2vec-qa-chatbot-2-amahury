@@ -20,9 +20,10 @@ import numpy as np
 df = pd.read_csv("data/Question_Answer_Dataset_v1.2_S10.csv")
 
 # load question and answer vectors generated from pre-trained word2vec model
-vector = np.load('data/vector-new.npz')
-ques_vec = vector['x']
-ans_vec = vector['y']
+vector0 = np.load('data/vector.npz')
+vector1 = np.load('data/vector-new.npz')
+ques_vec = vector0['x']
+ans_vec = vector1['x']
 
 # load th trained word2vec model 
 # Hint: You should use the word2vec model pre-trained with both question and answer sets.
@@ -65,17 +66,28 @@ def trained_sentence_vec(sent):
 # Function output: the index of the optimal answer
 # Function goal: do vector search among both question and answer sets
 ###
+import re
+
+def token(text):
+  # Removing punctuations in string
+  res = re.sub(r'[^\w\s]', '', text)
+  # Replace all sequences of two or more spaces with a single space.
+  res = re.sub(' +', ' ', res)
+  # lower case
+  res = res.lower()
+  return res.strip().split(" ")
+
 def find_answer(qr_sentence, ques_vec, ans_vec):
     # use one query sentence to retrieve answer
     qr_sentence = gensim.utils.simple_preprocess(qr_sentence)
-    qr_sentence = token(qr_sentence)
+ #   qr_sentence = token(qr_sentence)
     qr_sent_vec = trained_sentence_vec(qr_sentence)
 
     # perform vector search through similarity comparison
     # define the number of feature (vector) dimensions
     n_dim = ques_vec.shape[1]
     # define the number of pairs of question and answer
-    n_q_a = n_dim*ans_vec.shape[1]  
+    n_q_a = n_dim 
     # define ques_vec as a numpy array that is a float of size 32 bits
     x = np.vstack(ques_vec).astype(np.float32)
     # define ans_vec as a numpy array that is a float of size 32 bits
@@ -117,7 +129,7 @@ if prompt := st.chat_input("What's your question?"):
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            ans_idx = find_answer(prompt, ques_vec)
+            ans_idx = find_answer(prompt, ques_vec, ans_vec)
             response = df["Answer"][ans_idx]
             st.write(response)
             
