@@ -20,13 +20,13 @@ import numpy as np
 df = pd.read_csv("data/Question_Answer_Dataset_v1.2_S10.csv")
 
 # load question and answer vectors generated from pre-trained word2vec model
-vector = ...
-ques_vec = ...
-ans_vec = ...
+vector = np.load('data/vector-new.npz')
+ques_vec = vector['x']
+ans_vec = vector['y']
 
 # load th trained word2vec model 
 # Hint: You should use the word2vec model pre-trained with both question and answer sets.
-trained_w2v = ...
+trained_w2v = gensim.models.Word2Vec.load("data/w2v-advanced.model")
 
 # App title
 st.set_page_config(page_title="Word2vec Question and Answer Chatbot")
@@ -50,13 +50,13 @@ for message in st.session_state.messages:
 def trained_sentence_vec(sent):
     # Filter out terms that are not in the vocabulary from the question sentence
     # Hint: Use model.wv to get the whole vocabulary
-    qu_voc = ...
+    qu_voc = [tm for tm in sent if tm in trained_w2v.wv]
     # Get the embedding of the characters
     # Hint: Stack arrays in sequence vertically using np.vstack
-    emb = ...
+    emb = np.vstack([trained_w2v.wv[tm] for tm in sent if tm in trained_w2v.wv])
     # Calculate the arithmetic mean for the vectors of each included word along the column 
     # to get the vector of the question
-    ave_vec = ...
+    ave_vec = np.mean(emb, axis=0)
     return ave_vec
 
 # Function to find the answer through vector search
@@ -73,17 +73,17 @@ def find_answer(qr_sentence, ques_vec, ans_vec):
 
     # perform vector search through similarity comparison
     # define the number of feature (vector) dimensions
-    n_dim = ...
+    n_dim = ques_vec.shape[1]
     # define the number of pairs of question and answer
-    n_q_a = ... 
+    n_q_a = n_dim*ans_vec.shape[1]  
     # define ques_vec as a numpy array that is a float of size 32 bits
-    x = ...
+    x = np.vstack(ques_vec).astype(np.float32)
     # define ans_vec as a numpy array that is a float of size 32 bits
-    y = ...
+    y = np.vstack(ans_vec).astype(np.float32)
     # reshape qr_sent_vec
     q = qr_sent_vec.reshape(1, -1)
     # build the faiss index, n_dim=size of vectors using faiss.index_factory with METRIC_INNER_PRODUCT parameter
-    index = ...
+    index = faiss.index_factory(n_q_a, "Flat", faiss.METRIC_INNER_PRODUCT)
 	
     # add all questions into the faiss index
     faiss.normalize_L2(x)
@@ -96,14 +96,14 @@ def find_answer(qr_sentence, ques_vec, ans_vec):
     # do vector search for the query sentence
     # return similarity score and idx using index.search function
     faiss.normalize_L2(q)
-    similarity, idx = ...
+    similarity, idx = index.search(q, k=index.ntotal)
     ans_idx = idx[0][0]
 	
     # find out the optimal answer index
     # Hint: if ans_idx is over the number of question-answer pairs, we need to make a if-statement to 
     # return an answer index align with our question-answer dataset
-    if...
-      
+    if ans_idx > n_q_a:
+        ans_idx = ans_idx - n_q_a  
     return ans_idx
 
 
